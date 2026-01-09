@@ -29,10 +29,7 @@ lemma sum_eq₁ {V} [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRe
   simp [sum]; congr; ext v
   unfold SimpleGraph.degree SimpleGraph.neighborFinset
   simp [indicator]
-  rw [Finset.card_bij (i := fun p _ => p.2)]
-  · simp; grind
-  · simp; grind
-  · simp
+  rw [Finset.card_bij (i := fun p _ => p.2)] <;> simp <;> grind
 
 lemma aux₀ {V} [Fintype V] [DecidableEq V] (P : Sym2 V → Prop) [DecidablePred P]
     (hP : ∀ x, P s(x, x) → False) :
@@ -42,10 +39,7 @@ lemma aux₀ {V} [Fintype V] [DecidableEq V] (P : Sym2 V → Prop) [DecidablePre
   · intros x hx; cases x; rename_i x y
     simp [Finset.bipartiteAbove] at *
     rw [Finset.card_eq_two]
-    use ⟨x, y⟩, ⟨y, x⟩; constructor
-    · have h : x ≠ y := by intro h; subst x; simp_all
-      grind
-    · grind [Sym2.eq_swap]
+    use ⟨x, y⟩, ⟨y, x⟩; constructor <;> grind [Sym2.eq_swap]
   · simp; intros a b h
     simp [Finset.bipartiteBelow]
     rw [Finset.card_eq_one]
@@ -61,8 +55,7 @@ lemma sum_eq₂ {V} [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRe
            if G.Adj x.1 x.2 then 1 else 0 := by
     intro ⟨x₁, x₂⟩; simp
     split_ifs <;> rename_i h
-    · rw [Finset.card_eq_one]
-      use x₁; ext x; simp; tauto
+    · rw [Finset.card_eq_one]; use x₁; grind
     · simp; exact h
   rw [Finset.sum_congr rfl h]
   simp only [Finset.sum_boole, Nat.cast_id]
