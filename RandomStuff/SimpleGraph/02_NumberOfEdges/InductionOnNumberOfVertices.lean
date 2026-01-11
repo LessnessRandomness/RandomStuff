@@ -9,6 +9,8 @@ set_option linter.flexible false
 set_option linter.unusedDecidableInType false
 
 
+namespace NumberOfEdges
+
 lemma upper_limit_of_edgeset_card {n} (G : SimpleGraph (Fin n)) [inst : DecidableRel G.Adj] :
     G.edgeFinset.card ≤ n.choose 2 := by
   induction n with
@@ -36,6 +38,7 @@ lemma remove_last_vertex_of_complete_graph n :
   ext x y; simp [remove_last_vertex]
 
 lemma edgeset_card_of_complete_graph n :
+    ∀ [DecidableRel (⊤ : SimpleGraph (Fin n)).Adj],
     (⊤ : SimpleGraph (Fin n)).edgeFinset.card = n.choose 2 := by
   induction n with
   | zero => simp [Sym2.diagSet]
@@ -43,13 +46,12 @@ lemma edgeset_card_of_complete_graph n :
     have h := add_vertex_remove_last_vertex_eq_self (⊤ : SimpleGraph (Fin (n + 1)))
     rw [remove_last_vertex_of_complete_graph] at h
     rw! (castMode := .all) [← h]
-    rw [add_vertex_edgeFinset_card, iH]; simp
+    intro inst; rw [add_vertex_edgeFinset_card, iH]; simp
     have h₀ : ({x : Fin n | ¬ Fin.last n = x.castSucc} : Finset _) = Finset.univ := by
       ext x; simp; grind
     simp [h₀, Nat.choose_succ_left, add_comm]
 
-
-lemma max_number_of_edges_iff {n} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
+lemma complete_graph_of_max_number_of_edges {n} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     (h : G.edgeFinset.card = n.choose 2) : G = ⊤ := by
   induction n with
   | zero => ext x y; exfalso; cases x; lia
@@ -73,4 +75,42 @@ lemma max_number_of_edges_iff {n} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj]
     simp [add_vertex]
     grind
 
-#min_imports
+lemma max_number_of_edges_iff_aux {n} (G : SimpleGraph (Fin n)) [DecidableRel G.Adj] :
+    G.edgeFinset.card = n.choose 2 ↔ G = ⊤ := by
+  constructor <;> intro h
+  · exact complete_graph_of_max_number_of_edges G h
+  · rw! (castMode := .all) [h]
+    rw [edgeset_card_of_complete_graph]
+
+
+lemma number_of_edges_le {V} [Fintype V] (G : SimpleGraph V) [inst : DecidableRel G.Adj] :
+    G.edgeFinset.card ≤ (Fintype.card V).choose 2 := by
+  have f := SimpleGraph.overFinIso G (rfl (a := Fintype.card V))
+  have inst₀ : DecidableRel (G.overFin rfl).Adj := by
+    intros x y; apply SimpleGraph.Iso.symm at f
+    rw [← SimpleGraph.Iso.map_adj_iff f]
+    apply inst
+  rw [SimpleGraph.Iso.card_edgeFinset_eq f]
+  apply upper_limit_of_edgeset_card
+
+lemma max_number_of_edges_iff {V} [Fintype V] (G : SimpleGraph V) [inst : DecidableRel G.Adj] :
+    G.edgeFinset.card = (Fintype.card V).choose 2 ↔ G = ⊤ := by
+  have f := SimpleGraph.overFinIso G (rfl (a := Fintype.card V))
+  have inst₀ : DecidableRel (G.overFin rfl).Adj := by
+    intros x y; apply SimpleGraph.Iso.symm at f
+    rw [← SimpleGraph.Iso.map_adj_iff f]
+    apply inst
+  rw [SimpleGraph.Iso.card_edgeFinset_eq f]
+  rw [max_number_of_edges_iff_aux]
+  constructor <;> intro h
+  · ext x y; rw [← f.map_rel_iff']
+    rw! (castMode := .all) [h]
+    simp
+  · have h : ∀ x y, G.Adj x y ↔ (⊤ : SimpleGraph V).Adj x y := by
+      intros x y; rw [h]
+    ext x y
+    simp_rw [← f.map_rel_iff'] at h
+    have hxy := h (f.symm x) (f.symm y)
+    simp_all
+
+end NumberOfEdges

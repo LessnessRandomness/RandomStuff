@@ -1,4 +1,3 @@
-import RandomStuff.Basic
 import RandomStuff.SimpleGraph.Utils
 import RandomStuff.SimpleGraph.«01_HandshakeLemma».DoubleCounting
 import RandomStuff.SimpleGraph.«01_HandshakeLemma».InductionOnNumberOfEdges

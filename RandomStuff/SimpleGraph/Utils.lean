@@ -7,10 +7,6 @@ set_option linter.unusedDecidableInType false
 
 
 
-
-
-
-
 lemma Fin.univ_succ_rev (n : ℕ) :
     Finset.univ = Finset.cons (Fin.last n) (Finset.map
     {toFun := Fin.castSucc, inj' := by intros a b h; simp at h; assumption} Finset.univ)
@@ -60,7 +56,6 @@ lemma Fin.sym2_univ_succ {n : ℕ} :
     simp [Fin.sym2_with_fin_last]; tauto
   · right; left; use s(⟨a.val, by grind⟩, ⟨b.val, by grind⟩)
     simp [Fin.sym2_castSucc]
-
 
 
 
