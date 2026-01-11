@@ -1,4 +1,6 @@
-import Mathlib
+import Mathlib.Combinatorics.Enumerative.DoubleCounting
+import Mathlib.Combinatorics.SimpleGraph.Finite
+import Mathlib.Data.Fintype.BigOperators
 
 -- See https://thebook.zib.de/graph%20theory/2024/10/11/handshaking-lemma.html
 -- for much simpler and more beautiful proof outside Mathlib
