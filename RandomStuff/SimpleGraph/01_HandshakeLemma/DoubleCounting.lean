@@ -10,6 +10,9 @@ set_option linter.flexible false
 set_option linter.unusedDecidableInType false
 
 
+namespace HandshakeLemma.DoubleCounting
+
+
 def indicator {V} [Fintype V] [DecidableEq V] (G : SimpleGraph V)
     [DecidableRel G.Adj] (v v₁ v₂ : V) : Prop :=
   v = v₁ ∧ G.Adj v₁ v₂
@@ -67,3 +70,6 @@ theorem degree_sum_formula {V} [Fintype V] [DecidableEq V] (G : SimpleGraph V)
     [DecidableRel G.Adj] :
     ∑ v, G.degree v = 2 * G.edgeFinset.card := by
   rw [← sum_eq₁, sum_eq₂]
+
+
+end HandshakeLemma.DoubleCounting

@@ -8,6 +8,7 @@ set_option linter.flexible false
 set_option linter.unusedDecidableInType false
 
 
+namespace HandshakeLemma.InductionOnNumberOfEdges
 
 theorem degree_sum_formula_aux {V} [Fintype V] [DecidableEq V] (G : SimpleGraph V)
     [DecidableRel G.Adj] {n : ℕ} (hg : G.edgeFinset.card = n) :
@@ -49,3 +50,5 @@ theorem degree_sum_formula {V} [Fintype V] [DecidableEq V] (G : SimpleGraph V)
     ∑ v, G.degree v = 2 * G.edgeFinset.card := by
   have h := rfl (a := G.edgeFinset.card)
   apply degree_sum_formula_aux at h; exact h
+
+end HandshakeLemma.InductionOnNumberOfEdges
