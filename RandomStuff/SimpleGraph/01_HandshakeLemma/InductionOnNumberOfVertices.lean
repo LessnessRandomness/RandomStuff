@@ -10,7 +10,7 @@ set_option linter.unusedDecidableInType false
 
 namespace HandshakeLemma.InductionOnNumberOfVertices
 
-theorem degree_sum_formula_for_fin_n {n} (G : SimpleGraph (Fin n)) [inst : DecidableRel G.Adj] :
+theorem degree_sum_formula_aux {n} (G : SimpleGraph (Fin n)) [inst : DecidableRel G.Adj] :
     ∑ v, G.degree v = 2 * G.edgeFinset.card := by
   induction n with
   | zero => simp
@@ -37,7 +37,7 @@ theorem degree_sum_formula {V} [inst : Fintype V] (G : SimpleGraph V) [inst : De
     simp only [SimpleGraph.Iso.degree_eq, implies_true]
   simp_rw [← h]
   rw [SimpleGraph.Iso.card_edgeFinset_eq f]
-  rw [← degree_sum_formula_for_fin_n]
+  rw [← degree_sum_formula_aux]
   rw [← Equiv.sum_comp (e := f.toEquiv)]
   simp
 
