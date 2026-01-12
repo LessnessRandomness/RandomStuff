@@ -2,8 +2,8 @@ import Mathlib.Combinatorics.Enumerative.DoubleCounting
 import Mathlib.Combinatorics.SimpleGraph.Finite
 import Mathlib.Data.Fintype.BigOperators
 
--- See https://thebook.zib.de/graph%20theory/2024/10/11/handshaking-lemma.html
--- for much simpler and more beautiful proof outside Mathlib
+-- Btw, see https://thebook.zib.de/graph%20theory/2024/10/11/handshaking-lemma.html
+-- for very simple and beautiful proof outside Mathlib
 
 set_option linter.flexible false
 set_option linter.unusedDecidableInType false
@@ -35,9 +35,8 @@ lemma sum_eq₂ {V} [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRe
     rw [SimpleGraph.mem_edgeSet] at hb
     use ⟨x, y⟩, ⟨y, x⟩
     constructor
-    · have hxy : x ≠ y := by intro a; subst a; exact (G.irrefl hb)
-      grind
-    · simp; ext p
+    · grind [SimpleGraph.irrefl]
+    · simp; ext p;
       simp; constructor <;> intro h
       · grind
       · obtain h | h := h
