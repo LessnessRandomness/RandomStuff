@@ -35,7 +35,7 @@ lemma sum_eq₂ {V} [Fintype V] [DecidableEq V] (G : SimpleGraph V) [DecidableRe
     rw [SimpleGraph.mem_edgeSet] at hb
     use ⟨x, y⟩, ⟨y, x⟩
     constructor
-    · have hxy : x ≠ y := by intro a; subst a; simp_all only [SimpleGraph.irrefl]
+    · have hxy : x ≠ y := by intro a; subst a; exact (G.irrefl hb)
       grind
     · simp; ext p
       simp; constructor <;> intro h
