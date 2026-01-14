@@ -130,3 +130,30 @@ theorem IsBipartiteWith.encard_edgeSet_le {s t : Set V} (h : G.IsBipartiteWith s
         ext x y; simp only [bot_adj, iff_false]; intro hxy
         apply h.mem_of_adj at hxy; simp at hs₀; simp [hs₀] at hxy
       · simp [hs₀]
+
+
+theorem IsBipartite.four_mul_encard_edgeSet_le (h : G.IsBipartite) :
+    4 * G.edgeSet.encard ≤ ENat.card V ^ 2 := by
+  rw [SimpleGraph.isBipartite_iff_exists_isBipartiteWith] at h
+  obtain ⟨s, t, h⟩ := h
+  have hG := IsBipartiteWith.encard_edgeSet_le h
+  have h₀ : s.encard + t.encard ≤ ENat.card V := by
+    rw [← Set.encard_union_eq h.disjoint]
+    exact Set.encard_le_card
+  by_cases hv : Finite V
+  · have hs : s.Finite := Set.toFinite s
+    have ht : t.Finite := Set.toFinite t
+    have hv' := ENat.card_eq_coe_natCard V
+    rw [hv'] at h₀ ⊢
+    have hs' : s.encard = ↑(s.ncard) := (Set.Finite.cast_ncard_eq hs).symm
+    have ht' : t.encard = ↑(t.ncard) := (Set.Finite.cast_ncard_eq ht).symm
+    rw [hs', ht'] at hG h₀
+    have h₁ : G.edgeSet.encard = ↑(G.edgeSet.ncard) := by
+      rw [Set.Finite.cast_ncard_eq]
+      exact Set.toFinite G.edgeSet
+    norm_cast at h₀
+    have h₂ : (s.ncard + t.ncard) ^ 2 ≤ Nat.card V ^ 2 :=
+      Nat.pow_le_pow_left h₀ 2
+    rw [h₁] at hG ⊢; norm_cast at *
+    by_cases hst : s.ncard ≤ t.ncard <;> nlinarith
+  · simp at hv; simp
