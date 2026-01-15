@@ -24,8 +24,8 @@ lemma edgeSet_decompose (a : V) :
 def edges_from_set_to_vertex (t : Finset V) (a : V) :=
     ((fun u ↦ s(u, a)) '' {x | x ∈ t ∧ G.Adj a x})
 
-open Classical in
-lemma incidenceSet_in_bipartite {s t : Finset V} {a : V} (hG : G.IsBipartiteWith (insert a ↑s) ↑t) :
+lemma incidenceSet_in_bipartite {s t : Finset V} {a : V}
+    (hG : G.IsBipartiteWith (insert a ↑s) ↑t) :
     G.incidenceSet a = edges_from_set_to_vertex (G := G) t a := by
   ext e; cases e; rename_i x y; simp only [mk'_mem_incidenceSet_iff, edges_from_set_to_vertex,
     Set.mem_image, Set.mem_setOf_eq, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
@@ -69,7 +69,6 @@ lemma ncard_edges_from_set_to_vertex (t : Finset V) (a : V) :
   refine ⟨h₂, by linarith⟩
 
 
-open Classical in
 theorem IsBipartiteWith.edgeSet_ncard_le_of_finsets {s t : Finset V}
     (hG : G.IsBipartiteWith ↑s ↑t) :
     G.edgeSet.Finite ∧ G.edgeSet.ncard ≤ s.card * t.card := by
@@ -83,6 +82,7 @@ theorem IsBipartiteWith.edgeSet_ncard_le_of_finsets {s t : Finset V}
     subst G; simp
   | cons a s h iH =>
     intros G hG
+    classical
     simp only [Finset.cons_eq_insert, Finset.coe_insert] at hG
     have hG' : (G.deleteIncidenceSet a).IsBipartiteWith ↑s ↑t :=
       stays_bipartite_after_vertex_removal hG
