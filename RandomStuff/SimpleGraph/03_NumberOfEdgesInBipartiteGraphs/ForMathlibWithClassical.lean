@@ -3,6 +3,71 @@ import Mathlib
 open SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
+lemma aux₀ {s t : Finset V} {a : V} (hG : G.IsBipartiteWith (insert a ↑s) ↑t) :
+    (G.deleteIncidenceSet a).IsBipartiteWith ↑s ↑t := by
+  constructor
+  · have h₀ := hG.disjoint
+    simp only [Set.disjoint_insert_left, SetLike.mem_coe, Finset.disjoint_coe] at h₀
+    simp only [Finset.disjoint_coe]; exact h₀.2
+  · intros x y hxy; simp only [SetLike.mem_coe]
+    have h₀ := hG.mem_of_adj
+    simp only [Set.mem_insert_iff, SetLike.mem_coe] at h₀
+    rw [G.deleteIncidenceSet_adj] at hxy; grind
+
+lemma aux₁ (a : V) :
+    G.edgeSet = (G.deleteIncidenceSet a).edgeSet ∪ G.incidenceSet a := by
+  symm; rw [edgeSet_deleteIncidenceSet];
+  simp only [Set.diff_union_self]
+  exact Set.union_eq_self_of_subset_right (incidenceSet_subset G a)
+
+def edges_from_set_to_vertex (t : Finset V) (a : V) :=
+    ((fun u ↦ s(u, a)) '' {x | x ∈ t ∧ G.Adj a x})
+
+open Classical in
+lemma aux₂ {s t : Finset V} {a : V} (hG : G.IsBipartiteWith (insert a ↑s) ↑t) :
+    G.incidenceSet a = edges_from_set_to_vertex (G := G) t a := by
+  ext e; cases e; rename_i x y; simp only [mk'_mem_incidenceSet_iff, edges_from_set_to_vertex,
+    Set.mem_image, Set.mem_setOf_eq, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
+  constructor <;> intro h
+  · obtain ⟨h, h₀ | h₀⟩ := h
+    · subst a; use y; simp only [h, and_true, and_self, or_true]
+      have h₀ := hG.mem_of_adj h
+      have h₁ := hG.disjoint (x := {x})
+      simp at h₁; grind
+    · subst a; use x; simp only [h.symm, and_true, and_self, true_or]
+      have h₀ := hG.mem_of_adj h
+      have h₁ := hG.disjoint (x := {y})
+      simp at h₁; grind
+  · obtain ⟨w, ⟨h₀, h₁⟩, ⟨h₂, h₃⟩ | ⟨h₂, h₃⟩⟩ := h
+    · subst a w; simp [h₁.symm]
+    · subst a w; simp [h₁]
+
+lemma aux₃ (t : Finset V) (a : V) :
+    Disjoint (G.deleteIncidenceSet a).edgeSet (edges_from_set_to_vertex (G := G) t a) := by
+  rw [Set.disjoint_iff_inter_eq_empty]
+  ext e; cases e; rename_i x y;
+  simp [SimpleGraph.deleteIncidenceSet_adj, edges_from_set_to_vertex]
+  grind
+
+lemma aux₄ (t : Finset V) (a : V) :
+    Finite ↑(edges_from_set_to_vertex (G := G) t a) ∧
+    (edges_from_set_to_vertex (G := G) t a).ncard ≤ t.card := by
+  have h₁ : {x | x ∈ t ∧ G.Adj a x}.Finite := by
+    apply Set.Finite.inter_of_left
+    apply Finset.finite_toSet
+  have h₂ : Finite ↑(edges_from_set_to_vertex t a) :=
+    Set.Finite.image (fun u => s(u, a)) h₁
+  have h₅ : (edges_from_set_to_vertex (G := G) t a).ncard ≤
+            {x | x ∈ t ∧ G.Adj a x}.ncard := by
+    apply Set.ncard_image_le
+    exact h₁
+  have h₆ : ({x | x ∈ t ∧ G.Adj a x}).ncard ≤ (SetLike.coe t).ncard := by
+    apply Set.ncard_inter_le_ncard_left
+    exact Set.finite_mem_finset t
+  simp at h₆
+  refine ⟨h₂, by linarith⟩
+
+
 open Classical in
 theorem IsBipartiteWith.edgeSet_ncard_le_of_finsets {s t : Finset V}
     (hG : G.IsBipartiteWith ↑s ↑t) :
@@ -17,88 +82,18 @@ theorem IsBipartiteWith.edgeSet_ncard_le_of_finsets {s t : Finset V}
     subst G; simp
   | cons a s h iH =>
     intros G hG
-    set G' := G.deleteIncidenceSet a
     simp only [Finset.cons_eq_insert, Finset.coe_insert] at hG
-    have hG' : G'.IsBipartiteWith ↑s ↑t := by
-      constructor
-      · have h₀ := hG.disjoint
-        simp only [Set.disjoint_insert_left, SetLike.mem_coe, Finset.disjoint_coe] at h₀
-        simp only [Finset.disjoint_coe]; exact h₀.2
-      · intros x y hxy; simp
-        have h₀ := hG.mem_of_adj
-        simp only [Set.mem_insert_iff, SetLike.mem_coe] at h₀
-        simp only [G'] at hxy; rw [G.deleteIncidenceSet_adj] at hxy
-        grind
-    obtain ⟨hG'₀, hG'₁⟩ := @iH G' hG'
-    have h₀ : G.edgeSet = G'.edgeSet ∪
-        (t.filter (G.Adj a)).map ⟨fun u => s(u, a), by intros u w; simp; grind⟩ := by
-      simp only [Finset.coe_map, Function.Embedding.coeFn_mk, Finset.coe_filter, G']
-      ext e; simp only [Set.mem_union, Set.mem_image, Set.mem_setOf_eq]
-      constructor <;> intro h₁
-      · cases e; rename_i x y; simp only [mem_edgeSet, Sym2.eq, Sym2.rel_iff',
-        Prod.mk.injEq, Prod.swap_prod_mk] at *
-        rw [G.deleteIncidenceSet_adj]
-        simp only [h₁, true_and]
-        by_cases h₂ : x = a <;> by_cases h₃ : y = a
-        · simp only [h₂, h₃, and_self, and_true, or_self, exists_eq_right,
-          SimpleGraph.irrefl, and_false]; subst x y; right; exact G.irrefl h₁
-        · simp only [h₂, ne_eq, not_true_eq_false, h₃, not_false_eq_true, and_true, Ne.symm h₃,
-            and_false, false_or, exists_eq_right]
-          subst a
-          have h₄ := hG.mem_of_adj h₁.symm;
-          simp only [h₁, and_true]
-          simp only [Set.mem_insert_iff, SetLike.mem_coe, true_or, and_true, h₃, false_or] at h₄
-          obtain ⟨h₄, h₅⟩ | h₄ := h₄
-          · have h₆ := hG.disjoint (x := {x}) (by simp)
-              (by simp only [Set.le_eq_subset, Set.singleton_subset_iff, SetLike.mem_coe]
-                  exact h₅)
-            simp at h₆
-          · exact h₄
-        · simp only [ne_eq, h₂, not_false_eq_true, h₃, not_true_eq_false, and_false, and_true,
-          false_or]
-          subst a; use x; simp only [true_or, and_true]
-          simp only [h₁.symm, and_true]
-          apply hG.mem_of_adj at h₁
-          simp only [Set.mem_insert_iff, SetLike.mem_coe, true_or, and_true] at h₁
-          obtain ⟨h₃ | h₃, h₄⟩ | h₃ := h₁ <;> try grind
-          have h₅ := hG.disjoint (x := {y}) (by simp)
-            (by simp only [Set.le_eq_subset, Set.singleton_subset_iff, SetLike.mem_coe]; exact h₄)
-          simp at h₅
-        · simp [h₂, h₃]
-      · cases e; rename_i x y; simp only [mem_edgeSet, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
-        Prod.swap_prod_mk] at h₁ ⊢
-        obtain h₁ | h₁ := h₁
-        · exact h₁.1
-        · obtain ⟨w, h₁, ⟨h₂, h₃⟩ | ⟨h₂, h₃⟩⟩ := h₁
-          · subst w a; exact h₁.2.symm
-          · subst w a; exact h₁.2
-    rw [h₀]; simp only [Finset.coe_map, Function.Embedding.coeFn_mk, Finset.coe_filter,
-      Set.finite_union, hG'₀, true_and, Finset.cons_eq_insert]
-    constructor
-    · apply Set.Finite.image (fun u => s(u, a))
-      apply Set.Finite.inter_of_left
-      exact Set.finite_mem_finset t
-    · have h₁ : {x | x ∈ t ∧ G.Adj a x}.Finite := by
-        apply Set.Finite.inter_of_left
-        apply Finset.finite_toSet
-      have h₂ : Finite ↑{x | x ∈ t ∧ G.Adj a x} := h₁
-      have h₃ : ((fun u => s(u, a)) '' {x | x ∈ t ∧ G.Adj a x}).Finite := by
-        exact Set.Finite.image (fun u => s(u, a)) h₁
-      have h₄ : Finite ↑((fun u => s(u, a)) '' {x | x ∈ t ∧ G.Adj a x}) := h₃
-      rw [Set.ncard_union_eq (hs := hG'₀) (ht := h₄)]
-      · simp only [h, not_false_eq_true, Finset.card_insert_of_notMem, ge_iff_le]; rw [Nat.succ_mul]
-        have h₅ : ((fun u => s(u, a)) '' {x | x ∈ t ∧ G.Adj a x}).ncard ≤
-                  {x | x ∈ t ∧ G.Adj a x}.ncard := by
-          apply Set.ncard_image_le
-          exact h₁
-        have h₆ : {x | x ∈ t ∧ G.Adj a x}.ncard ≤ (SetLike.coe t).ncard := by
-          apply Set.ncard_inter_le_ncard_left
-          exact Set.finite_mem_finset t
-        simp at h₆
-        linarith
-      · rw [Set.disjoint_iff_inter_eq_empty]
-        ext e; cases e; rename_i x y;
-        simp [G', SimpleGraph.deleteIncidenceSet_adj]; grind
+    have hG' : (G.deleteIncidenceSet a).IsBipartiteWith ↑s ↑t := aux₀ hG
+    obtain ⟨hG'₀, hG'₁⟩ := @iH (G.deleteIncidenceSet a) hG'
+    rw [aux₁ a, aux₂ hG]
+    simp only [hG'₀, Set.finite_union, Finset.cons_eq_insert, true_and]
+    obtain ⟨h₁, h₂⟩ := aux₄ (G := G) t a
+    refine ⟨h₁, ?_⟩
+    rw [Set.ncard_union_eq (hs := hG'₀) (ht := h₁)]
+    · simp only [h, not_false_eq_true, Finset.card_insert_of_notMem]
+      rw [Nat.succ_mul]
+      linarith
+    · exact aux₃ t a
 
 
 theorem IsBipartiteWith.encard_edgeSet_le {s t : Set V} (h : G.IsBipartiteWith s t) :
