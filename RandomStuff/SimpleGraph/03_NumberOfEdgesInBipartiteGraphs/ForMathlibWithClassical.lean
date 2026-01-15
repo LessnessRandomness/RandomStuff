@@ -3,7 +3,8 @@ import Mathlib
 open SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
 
-lemma aux₀ {s t : Finset V} {a : V} (hG : G.IsBipartiteWith (insert a ↑s) ↑t) :
+lemma stays_bipartite_after_vertex_removal {s t : Finset V} {a : V}
+    (hG : G.IsBipartiteWith (insert a ↑s) ↑t) :
     (G.deleteIncidenceSet a).IsBipartiteWith ↑s ↑t := by
   constructor
   · have h₀ := hG.disjoint
@@ -14,7 +15,7 @@ lemma aux₀ {s t : Finset V} {a : V} (hG : G.IsBipartiteWith (insert a ↑s) �
     simp only [Set.mem_insert_iff, SetLike.mem_coe] at h₀
     rw [G.deleteIncidenceSet_adj] at hxy; grind
 
-lemma aux₁ (a : V) :
+lemma edgeSet_decompose (a : V) :
     G.edgeSet = (G.deleteIncidenceSet a).edgeSet ∪ G.incidenceSet a := by
   symm; rw [edgeSet_deleteIncidenceSet];
   simp only [Set.diff_union_self]
@@ -24,7 +25,7 @@ def edges_from_set_to_vertex (t : Finset V) (a : V) :=
     ((fun u ↦ s(u, a)) '' {x | x ∈ t ∧ G.Adj a x})
 
 open Classical in
-lemma aux₂ {s t : Finset V} {a : V} (hG : G.IsBipartiteWith (insert a ↑s) ↑t) :
+lemma incidenceSet_in_bipartite {s t : Finset V} {a : V} (hG : G.IsBipartiteWith (insert a ↑s) ↑t) :
     G.incidenceSet a = edges_from_set_to_vertex (G := G) t a := by
   ext e; cases e; rename_i x y; simp only [mk'_mem_incidenceSet_iff, edges_from_set_to_vertex,
     Set.mem_image, Set.mem_setOf_eq, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk]
@@ -42,14 +43,14 @@ lemma aux₂ {s t : Finset V} {a : V} (hG : G.IsBipartiteWith (insert a ↑s) �
     · subst a w; simp [h₁.symm]
     · subst a w; simp [h₁]
 
-lemma aux₃ (t : Finset V) (a : V) :
+lemma disjoint_edgeSet_decompose (t : Finset V) (a : V) :
     Disjoint (G.deleteIncidenceSet a).edgeSet (edges_from_set_to_vertex (G := G) t a) := by
   rw [Set.disjoint_iff_inter_eq_empty]
   ext e; cases e; rename_i x y;
   simp [SimpleGraph.deleteIncidenceSet_adj, edges_from_set_to_vertex]
   grind
 
-lemma aux₄ (t : Finset V) (a : V) :
+lemma ncard_edges_from_set_to_vertex (t : Finset V) (a : V) :
     Finite ↑(edges_from_set_to_vertex (G := G) t a) ∧
     (edges_from_set_to_vertex (G := G) t a).ncard ≤ t.card := by
   have h₁ : {x | x ∈ t ∧ G.Adj a x}.Finite := by
@@ -83,17 +84,18 @@ theorem IsBipartiteWith.edgeSet_ncard_le_of_finsets {s t : Finset V}
   | cons a s h iH =>
     intros G hG
     simp only [Finset.cons_eq_insert, Finset.coe_insert] at hG
-    have hG' : (G.deleteIncidenceSet a).IsBipartiteWith ↑s ↑t := aux₀ hG
+    have hG' : (G.deleteIncidenceSet a).IsBipartiteWith ↑s ↑t :=
+      stays_bipartite_after_vertex_removal hG
     obtain ⟨hG'₀, hG'₁⟩ := @iH (G.deleteIncidenceSet a) hG'
-    rw [aux₁ a, aux₂ hG]
+    rw [edgeSet_decompose a, incidenceSet_in_bipartite hG]
     simp only [hG'₀, Set.finite_union, Finset.cons_eq_insert, true_and]
-    obtain ⟨h₁, h₂⟩ := aux₄ (G := G) t a
+    obtain ⟨h₁, h₂⟩ := ncard_edges_from_set_to_vertex (G := G) t a
     refine ⟨h₁, ?_⟩
     rw [Set.ncard_union_eq (hs := hG'₀) (ht := h₁)]
     · simp only [h, not_false_eq_true, Finset.card_insert_of_notMem]
       rw [Nat.succ_mul]
       linarith
-    · exact aux₃ t a
+    · exact disjoint_edgeSet_decompose t a
 
 
 theorem IsBipartiteWith.encard_edgeSet_le {s t : Set V} (h : G.IsBipartiteWith s t) :
