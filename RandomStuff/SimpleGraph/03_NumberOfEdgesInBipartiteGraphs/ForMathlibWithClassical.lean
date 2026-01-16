@@ -49,7 +49,7 @@ lemma disjoint_edgeSet_decompose (t : Finset V) (a : V) :
     Disjoint (G.deleteIncidenceSet a).edgeSet (edges_from_set_to_vertex (G := G) t a) := by
   rw [Set.disjoint_iff_inter_eq_empty]
   ext e; cases e; rename_i x y;
-  simp [SimpleGraph.deleteIncidenceSet_adj, edges_from_set_to_vertex]
+  simp [deleteIncidenceSet_adj, edges_from_set_to_vertex]
   grind
 
 lemma ncard_edges_from_set_to_vertex (t : Finset V) (a : V) :
@@ -132,7 +132,7 @@ theorem IsBipartiteWith.encard_edgeSet_le {s t : Set V} (h : G.IsBipartiteWith s
 
 theorem IsBipartite.four_mul_encard_edgeSet_le (h : G.IsBipartite) :
     4 * G.edgeSet.encard ≤ ENat.card V ^ 2 := by
-  rw [SimpleGraph.isBipartite_iff_exists_isBipartiteWith] at h
+  rw [isBipartite_iff_exists_isBipartiteWith] at h
   obtain ⟨s, t, h⟩ := h
   have hG := IsBipartiteWith.encard_edgeSet_le h
   have h₀ : s.encard + t.encard ≤ ENat.card V := by
@@ -158,3 +158,50 @@ theorem IsBipartite.four_mul_encard_edgeSet_le (h : G.IsBipartite) :
       rw [mul_assoc]; exact Nat.mul_le_mul_left 4 hG
     exact Nat.le_trans (Nat.le_trans h₄ h₃) h₂
   · simp at hv; simp
+
+
+theorem IsBipartite.four_mul_encard_edgeSet_le' (h : G.IsBipartite) :
+    4 * G.edgeSet.encard ≤ G.support.encard ^ 2 := by
+  set G' := G.induce G.support
+  have G'_isBipartite : G'.IsBipartite := by
+    rw [isBipartite_iff_exists_isBipartiteWith] at h ⊢
+    obtain ⟨s, t, hG⟩ := h
+    simp only [G']
+    use {x | x.val ∈ s ∩ G.support}, {x | x.val ∈ t ∩ G.support}
+    constructor
+    · rw [Set.disjoint_iff_inter_eq_empty]
+      ext x; simp; have h := hG.disjoint; grind
+    · simp only [Set.mem_inter_iff, Subtype.coe_prop, and_true, Set.mem_setOf_eq, Subtype.forall]
+      intros x hx y hy hxy
+      apply hG.mem_of_adj; exact hxy
+  have G'_edgeSet_encard : G'.edgeSet.encard = G.edgeSet.encard := by
+    set f := fun (p : Sym2 ↑G.support) => p.map (fun a => a.val)
+    rw [← Function.Injective.encard_image (f := f)]
+    · congr; ext x; simp only [Set.mem_image, G']
+      constructor <;> intro h₀
+      · obtain ⟨y, h₀, h₁⟩ := h₀
+        cases x with | h x₁ y₁ =>
+        cases y with | h x₂ y₂ =>
+        simp only [f, mem_edgeSet, comap_adj, Function.Embedding.subtype_apply] at *
+        simp only [Sym2.map_pair_eq, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
+          Prod.swap_prod_mk] at h₁
+        obtain ⟨h₁, h₂⟩ | ⟨h₁, h₂⟩ := h₁
+        · rw [h₁, h₂] at h₀; exact h₀
+        · rw [h₁, h₂] at h₀; exact h₀.symm
+      · rw [Sym2.exists]
+        simp only [f, mem_edgeSet, comap_adj, Function.Embedding.subtype_apply,
+          Sym2.map_pair_eq, Subtype.exists, exists_and_left, exists_prop]
+        cases x with | h x y =>
+        simp only [support, mem_edgeSet, SetRel.mem_dom, Set.mem_setOf_eq, Sym2.eq, Sym2.rel_iff',
+          Prod.mk.injEq, Prod.swap_prod_mk] at *
+        use x; simp only [true_and]
+        refine ⟨?_, ?_⟩
+        · use y
+        · use y; simp only [h₀, true_or, and_true, true_and]
+          use x; exact h₀.symm
+    · intros p₁ p₂; simp only [f]; intros hp
+      cases p₁ with | h x₁ y₁ =>
+      cases p₂ with | h x₂ y₂ =>
+      simp at hp ⊢; grind
+  apply IsBipartite.four_mul_encard_edgeSet_le at G'_isBipartite
+  rwa [G'_edgeSet_encard] at G'_isBipartite
