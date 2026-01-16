@@ -1,4 +1,6 @@
-import Mathlib
+import Mathlib.Algebra.Order.Star.Basic
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
+import Mathlib.Order.BourbakiWitt
 
 open SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
@@ -66,7 +68,7 @@ lemma ncard_edges_from_set_to_vertex (t : Finset V) (a : V) :
     apply Set.ncard_inter_le_ncard_left
     exact Set.finite_mem_finset t
   simp at h₆
-  refine ⟨h₂, by linarith⟩
+  refine ⟨h₂, Nat.le_trans h₅ h₆⟩
 
 
 theorem IsBipartiteWith.edgeSet_ncard_le_of_finsets {s t : Finset V}
@@ -94,7 +96,7 @@ theorem IsBipartiteWith.edgeSet_ncard_le_of_finsets {s t : Finset V}
     rw [Set.ncard_union_eq (hs := hG'₀) (ht := h₁)]
     · simp only [h, not_false_eq_true, Finset.card_insert_of_notMem]
       rw [Nat.succ_mul]
-      linarith
+      exact Nat.add_le_add hG'₁ h₂
     · exact disjoint_edgeSet_decompose t a
 
 
@@ -150,5 +152,9 @@ theorem IsBipartite.four_mul_encard_edgeSet_le (h : G.IsBipartite) :
     have h₂ : (s.ncard + t.ncard) ^ 2 ≤ Nat.card V ^ 2 :=
       Nat.pow_le_pow_left h₀ 2
     rw [h₁] at hG ⊢; norm_cast at *
-    by_cases hst : s.ncard ≤ t.ncard <;> nlinarith
+    have h₃ : 4 * s.ncard * t.ncard ≤ (s.ncard + t.ncard) ^ 2 :=
+      four_mul_le_pow_two_add s.ncard t.ncard
+    have h₄ : 4 * G.edgeSet.ncard ≤ 4 * s.ncard * t.ncard := by
+      rw [mul_assoc]; exact Nat.mul_le_mul_left 4 hG
+    exact Nat.le_trans (Nat.le_trans h₄ h₃) h₂
   · simp at hv; simp
