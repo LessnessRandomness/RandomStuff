@@ -160,48 +160,46 @@ theorem IsBipartite.four_mul_encard_edgeSet_le (h : G.IsBipartite) :
   · simp at hv; simp
 
 
-theorem IsBipartite.four_mul_encard_edgeSet_le' (h : G.IsBipartite) :
+lemma colorable_induce {n} (h : G.Colorable n) (A : Set V) : (G.induce A).Colorable n := by
+  simp only [induce, SimpleGraph.comap, Function.Embedding.subtype_apply] at h ⊢
+  obtain ⟨colors, property⟩ := h
+  use fun a => colors (a.val)
+  intros a b hab hab'; simp only [completeGraph_eq_top, top_adj, ne_eq] at property hab
+  exact property hab hab'
+
+
+lemma edgeSet_encard_of_induce_support :
+    (G.induce G.support).edgeSet.encard = G.edgeSet.encard := by
+  set f := fun (p : Sym2 ↑G.support) => p.map (fun a => a.val)
+  rw [← Function.Injective.encard_image (f := f)]
+  · congr; ext x; simp only [Set.mem_image, f]
+    constructor <;> intro h
+    · obtain ⟨y, h₀, h₁⟩ := h
+      cases x with | h x₁ y₁ =>
+      cases y with | h x₂ y₂ =>
+      simp only [mem_edgeSet, comap_adj, Function.Embedding.subtype_apply, Sym2.map_pair_eq,
+        Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at *
+      obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := h₁
+      · exact h₀
+      · exact h₀.symm
+    · rw [Sym2.exists]; simp only [mem_edgeSet, comap_adj, Function.Embedding.subtype_apply,
+      Sym2.map_pair_eq, Subtype.exists, exists_and_left, exists_prop]
+      cases x with | h x y =>
+      simp only [mem_edgeSet, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk] at *
+      use x; simp only [true_and]; refine ⟨?_, ?_⟩
+      · exact (mem_support G).mpr (by use y)
+      · use y; exact ⟨h, (mem_support G).mpr (by use x; exact h.symm), by simp⟩
+  · rintro ⟨x₁, y₁⟩ ⟨x₂, y₂⟩ h
+    simp only [f, Sym2.map_pair_eq, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
+      Prod.swap_prod_mk] at h ⊢
+    grind
+
+
+theorem IsBipartite.four_mul_encard_edgeSet_le_support_encard_sq (h : G.IsBipartite) :
     4 * G.edgeSet.encard ≤ G.support.encard ^ 2 := by
-  set G' := G.induce G.support
-  have G'_isBipartite : G'.IsBipartite := by
-    rw [isBipartite_iff_exists_isBipartiteWith] at h ⊢
-    obtain ⟨s, t, hG⟩ := h
-    simp only [G']
-    use {x | x.val ∈ s ∩ G.support}, {x | x.val ∈ t ∩ G.support}
-    constructor
-    · rw [Set.disjoint_iff_inter_eq_empty]
-      ext x; simp; have h := hG.disjoint; grind
-    · simp only [Set.mem_inter_iff, Subtype.coe_prop, and_true, Set.mem_setOf_eq, Subtype.forall]
-      intros x hx y hy hxy
-      apply hG.mem_of_adj; exact hxy
-  have G'_edgeSet_encard : G'.edgeSet.encard = G.edgeSet.encard := by
-    set f := fun (p : Sym2 ↑G.support) => p.map (fun a => a.val)
-    rw [← Function.Injective.encard_image (f := f)]
-    · congr; ext x; simp only [Set.mem_image, G']
-      constructor <;> intro h₀
-      · obtain ⟨y, h₀, h₁⟩ := h₀
-        cases x with | h x₁ y₁ =>
-        cases y with | h x₂ y₂ =>
-        simp only [f, mem_edgeSet, comap_adj, Function.Embedding.subtype_apply] at *
-        simp only [Sym2.map_pair_eq, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
-          Prod.swap_prod_mk] at h₁
-        obtain ⟨h₁, h₂⟩ | ⟨h₁, h₂⟩ := h₁
-        · rw [h₁, h₂] at h₀; exact h₀
-        · rw [h₁, h₂] at h₀; exact h₀.symm
-      · rw [Sym2.exists]
-        simp only [f, mem_edgeSet, comap_adj, Function.Embedding.subtype_apply,
-          Sym2.map_pair_eq, Subtype.exists, exists_and_left, exists_prop]
-        cases x with | h x y =>
-        simp only [support, mem_edgeSet, SetRel.mem_dom, Set.mem_setOf_eq, Sym2.eq, Sym2.rel_iff',
-          Prod.mk.injEq, Prod.swap_prod_mk] at *
-        use x; simp only [true_and]
-        refine ⟨?_, ?_⟩
-        · use y
-        · use y; simp only [h₀, true_or, and_true, true_and]
-          use x; exact h₀.symm
-    · intros p₁ p₂; simp only [f]; intros hp
-      cases p₁ with | h x₁ y₁ =>
-      cases p₂ with | h x₂ y₂ =>
-      simp at hp ⊢; grind
+  set G' := G.induce ↑G.support
+  have G'_isBipartite : G'.IsBipartite := colorable_induce h _
+  have G'_edgeSet_encard : G'.edgeSet.encard = G.edgeSet.encard := by exact
+    edgeSet_encard_of_induce_support
   apply IsBipartite.four_mul_encard_edgeSet_le at G'_isBipartite
   rwa [G'_edgeSet_encard] at G'_isBipartite
