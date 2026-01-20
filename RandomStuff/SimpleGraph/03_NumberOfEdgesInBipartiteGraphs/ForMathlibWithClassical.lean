@@ -1,6 +1,4 @@
-import Mathlib.Algebra.Order.Star.Basic
-import Mathlib.Combinatorics.SimpleGraph.Bipartite
-import Mathlib.Order.BourbakiWitt
+import Mathlib
 
 open SimpleGraph
 variable {V : Type*} {G : SimpleGraph V}
@@ -23,7 +21,7 @@ lemma edgeSet_decompose (a : V) :
   simp only [Set.diff_union_self]
   exact Set.union_eq_self_of_subset_right (incidenceSet_subset G a)
 
-def edges_from_set_to_vertex (t : Finset V) (a : V) :=
+def edges_from_set_to_vertex (t : Set V) (a : V) :=
     ((fun u ↦ s(u, a)) '' {x | x ∈ t ∧ G.Adj a x})
 
 lemma incidenceSet_in_bipartite {s t : Finset V} {a : V}
@@ -53,21 +51,20 @@ lemma disjoint_edgeSet_decompose (t : Finset V) (a : V) :
   grind
 
 lemma ncard_edges_from_set_to_vertex (t : Finset V) (a : V) :
-    Finite ↑(edges_from_set_to_vertex (G := G) t a) ∧
+    (edges_from_set_to_vertex (G := G) t a).Finite ∧
     (edges_from_set_to_vertex (G := G) t a).ncard ≤ t.card := by
   have h₁ : {x | x ∈ t ∧ G.Adj a x}.Finite := by
     apply Set.Finite.inter_of_left
     apply Finset.finite_toSet
-  have h₂ : Finite ↑(edges_from_set_to_vertex t a) :=
+  have h₂ : (edges_from_set_to_vertex t a).Finite :=
     Set.Finite.image (fun u => s(u, a)) h₁
   have h₅ : (edges_from_set_to_vertex (G := G) t a).ncard ≤
-            {x | x ∈ t ∧ G.Adj a x}.ncard := by
-    apply Set.ncard_image_le
-    exact h₁
-  have h₆ : ({x | x ∈ t ∧ G.Adj a x}).ncard ≤ (SetLike.coe t).ncard := by
+            {x | x ∈ t ∧ G.Adj a x}.ncard :=
+    Set.ncard_image_le h₁
+  have h₆ : ({x | x ∈ t ∧ G.Adj a x}).ncard ≤ (t : Set V).ncard := by
     apply Set.ncard_inter_le_ncard_left
     exact Set.finite_mem_finset t
-  simp at h₆
+  simp only [Set.ncard_coe_finset] at h₆
   refine ⟨h₂, Nat.le_trans h₅ h₆⟩
 
 
@@ -199,7 +196,240 @@ theorem IsBipartite.four_mul_encard_edgeSet_le_support_encard_sq (h : G.IsBipart
     4 * G.edgeSet.encard ≤ G.support.encard ^ 2 := by
   set G' := G.induce ↑G.support
   have G'_isBipartite : G'.IsBipartite := colorable_induce h _
-  have G'_edgeSet_encard : G'.edgeSet.encard = G.edgeSet.encard := by exact
+  have G'_edgeSet_encard : G'.edgeSet.encard = G.edgeSet.encard :=
     edgeSet_encard_of_induce_support
   apply IsBipartite.four_mul_encard_edgeSet_le at G'_isBipartite
   rwa [G'_edgeSet_encard] at G'_isBipartite
+
+
+
+--- criterions for equality (not to be added to Mathlib, at least not now)
+
+def IsBipartiteWith.complete {s t : Set V} (h : Disjoint s t) :
+    SimpleGraph V :=
+  ⟨(fun x y => x ∈ s ∧ y ∈ t ∨ x ∈ t ∧ y ∈ s),
+   by intros x y hxy; grind,
+   by intros x hx; grind⟩
+
+def IsBipartiteWith.complete_is_bipartite {s t : Set V} (h : Disjoint s t) :
+    (IsBipartiteWith.complete h).IsBipartiteWith s t := by
+  simp only [IsBipartiteWith.complete]
+  refine ⟨h, by simp⟩
+
+lemma disjoint_of_insert_left_of_finsets {s t : Finset V} {a : V} [DecidableEq V]
+    (h : Disjoint ↑(insert a s) (t : Set V)) :
+    Disjoint (s : Set V) (t : Set V) := by
+  simp only [Finset.coe_insert, Set.disjoint_insert_left, SetLike.mem_coe,
+    Finset.disjoint_coe] at h
+  simp only [Finset.disjoint_coe]
+  exact h.2
+
+lemma IsBipartiteWith.complete_decompose {s t : Finset V} {a : V}
+    [DecidableEq V] (h : Disjoint ↑(insert a s) ↑t) :
+    (complete h).edgeSet =
+    (complete (disjoint_of_insert_left_of_finsets h)).edgeSet ∪
+    edges_from_set_to_vertex (G := complete h) t a := by
+  simp only [complete, Finset.coe_insert, Set.mem_insert_iff, SetLike.mem_coe,
+    edges_from_set_to_vertex, true_or, true_and]
+  ext x; cases x; rename_i x y; simp; grind
+
+lemma IsBipartiteWith.complete_decompose_disjoint {s t : Finset V} {a : V}
+    (ha : a ∉ s) [DecidableEq V] (h : Disjoint ↑(insert a s) ↑t) :
+    Disjoint
+      (complete (disjoint_of_insert_left_of_finsets h)).edgeSet
+      (edges_from_set_to_vertex (G := complete h) t a) := by
+  rw [Set.disjoint_iff_inter_eq_empty]
+  simp only [complete, SetLike.mem_coe, edges_from_set_to_vertex, Finset.coe_insert,
+    Set.mem_insert_iff, true_or, true_and]
+  ext e; simp only [Set.mem_inter_iff, Set.mem_image, Set.mem_setOf_eq, Set.mem_empty_iff_false,
+    iff_false, not_and, not_exists, and_imp]
+  cases e; rename_i x y; simp only [mem_edgeSet, Sym2.eq, Sym2.rel_iff', Prod.mk.injEq,
+    Prod.swap_prod_mk, not_or, not_and]
+  simp only [Finset.coe_insert, Set.disjoint_insert_left, SetLike.mem_coe,
+    Finset.disjoint_coe] at h
+  grind
+
+lemma IsBipartiteWith.complete_edgeSet_finite_of_finsets {s t : Finset V}
+    (h : Disjoint (s : Set V) (t : Set V)) :
+    (complete h).edgeSet.Finite :=
+  (edgeSet_ncard_le_of_finsets (complete_is_bipartite h)).1
+
+lemma IsBipartiteWith.complete_decompose_card_right {s t : Finset V} {a : V}
+    [DecidableEq V] (h : Disjoint ↑(insert a s) ↑t) :
+    (edges_from_set_to_vertex (G := complete h) t a).encard = ↑t.card := by
+  simp only [edges_from_set_to_vertex, SetLike.mem_coe, Finset.coe_insert]
+  rw [Function.Injective.encard_image]
+  · rw [Set.setOf_and]; simp only [SetLike.setOf_mem_eq, complete, Set.mem_insert_iff,
+    SetLike.mem_coe, true_or, true_and]
+    have h₀ : ↑t ⊆ {a_1 | a_1 ∈ t ∨ a ∈ t ∧ (a_1 = a ∨ a_1 ∈ s)} := by
+      intros x hx; simp at *; tauto
+    rw [Set.inter_eq_self_of_subset_left h₀]
+    simp
+  · intros x y hxy; simp at hxy; grind
+
+
+def IsBipartiteWith.edgeSet_encard_of_complete_of_finsets {s t : Finset V}
+    (h : Disjoint (s : Set V) (t : Set V)) :
+    (complete h).edgeSet.Finite ∧ (complete h).edgeSet.encard = ↑s.card * ↑t.card := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+    have h₀ : complete h = ⊥ := by
+      ext x y; simp [complete]
+    rw [h₀]; simp
+  | insert a s ha iH =>
+    have h₀ := complete_edgeSet_finite_of_finsets h
+    refine ⟨h₀, ?_⟩
+    have h₁ : Disjoint (s : Set V) (t : Set V) := disjoint_of_insert_left_of_finsets h
+    obtain ⟨h₂, h₃⟩ := iH h₁
+    rw [complete_decompose, Set.encard_union_eq (complete_decompose_disjoint ha h)]
+    rw [h₃, complete_decompose_card_right, Finset.card_insert_of_notMem ha]
+    norm_cast; rw [Nat.succ_mul]
+
+
+
+lemma subset_of_inter_eq_self {X Y : Set V}
+    (h : (X ∩ Y).ncard = X.ncard) (hX : X.Finite) (hY : Y.Finite) :
+    X ⊆ Y := by
+  have instX : Finite ↑X := Set.finite_coe_iff.mpr hX
+  have instY : Finite ↑Y := Set.finite_coe_iff.mpr hY
+  have inst : Finite ↑(X ∩ Y) := Finite.Set.finite_inter_of_left X Y
+  rw [← Set.ncard_inter_add_ncard_diff_eq_ncard (s := X) (t := Y) ] at h
+  simp only [Nat.left_eq_add] at h
+  have inst' : Finite ↑(X \ Y) := Finite.Set.finite_diff X Y
+  rw [Set.ncard_eq_zero inst'] at h
+  rw [Set.diff_eq_empty] at h; exact h
+
+lemma neighborSet_finite_of_edgeSet_finite {a : V} (h : G.edgeSet.Finite) :
+    (G.neighborSet a).Finite := by
+  set f : V → Sym2 V := fun x : V => s(x, a)
+  have h₀ : f '' G.neighborSet a ⊆ G.edgeSet := by
+    intros e h; cases e; rename_i x y; simp only [Set.mem_image, mem_neighborSet, mem_edgeSet] at *
+    obtain ⟨v, h⟩ := h; simp only [Sym2.eq, Sym2.rel_iff', Prod.mk.injEq, Prod.swap_prod_mk,
+      f] at h;
+    obtain ⟨h, ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩⟩ := h
+    · exact h.symm
+    · exact h
+  have h₁ : (f '' G.neighborSet a).Finite := Set.Finite.subset h h₀
+  apply Set.Finite.of_finite_image h₁
+  intro x hx y hy hxy; simp [f] at hxy; grind
+
+lemma edges_from_set_to_vertex_le (t : Finset V) (a : V) :
+    (edges_from_set_to_vertex (G := G) t a).ncard ≤ t.card := by
+  simp only [edges_from_set_to_vertex]
+  have h₉ : {x | x ∈ t ∧ G.Adj a x}.Finite := by
+    rw [@Set.setOf_and]
+    exact Set.toFinite ({a | a ∈ t} ∩ {a_1 | G.Adj a a_1})
+  have h₁₀ := Set.ncard_image_le (f := fun u ↦ s(u, a)) h₉
+  have h₁₁ : {x | x ∈ t ∧ G.Adj a x}.ncard ≤ (t : Set V).ncard := by
+    apply Set.ncard_le_ncard (ht := Finset.finite_toSet t)
+    exact Set.sep_subset (Membership.mem t.val) (G.Adj a)
+  simp only [Set.ncard_coe_finset] at h₁₁
+  exact Nat.le_trans h₁₀ h₁₁
+
+
+
+
+lemma IsBipartiteWith.encard_edgeSet_is_max_of_finsets
+    {s t : Finset V} (h : G.IsBipartiteWith ↑s ↑t) :
+    G.edgeSet.ncard = s.card * t.card ↔ G = IsBipartiteWith.complete h.disjoint := by
+  have h₀ : G.edgeSet.Finite := by
+    have h₁ := IsBipartiteWith.edgeSet_ncard_le_of_finsets h
+    exact h₁.1
+  revert G h h₀
+  induction s using Finset.cons_induction with
+  | empty =>
+    simp only [Finset.coe_empty, Finset.card_empty, zero_mul]
+    intros G h h₀
+    constructor <;> intro h₁
+    · rw [Set.ncard_eq_zero (hs := h₀)] at h₁
+      simp only [edgeSet_eq_empty] at h₁; subst G
+      ext x y; simp [complete]
+    · rw [h₁]
+      have h₂ := edgeSet_encard_of_complete_of_finsets (s := ∅) (t := t)
+        (by convert h.disjoint; simp)
+      simp only [Finset.coe_empty, Finset.card_empty, CharP.cast_eq_zero, zero_mul,
+        Set.encard_eq_zero, edgeSet_eq_empty] at h₂ ⊢
+      rw [h₂.2]; simp
+  | cons a s ha iH =>
+    simp only [Finset.coe_cons, Finset.card_cons]; intros G h h₀
+    constructor <;> intro h₁
+    · have h' := edgeSet_decompose (G := G) a
+      rw [h'] at h₁
+      rw [incidenceSet_in_bipartite h] at h₁
+      have h₂ := disjoint_edgeSet_decompose (G := G) t a
+      have h₃ : (G.deleteIncidenceSet a).edgeSet.Finite :=
+        Set.Finite.subset h₀ (edgeSet_mono (deleteIncidenceSet_le G a))
+      have h₄ : (edges_from_set_to_vertex (G := G) t a).Finite :=
+        Set.Finite.image _ (Set.toFinite _)
+      rw [Set.ncard_union_eq (hs := h₃) (ht := h₄) h₂] at h₁
+      have h₅ : (G.deleteIncidenceSet a).IsBipartiteWith ↑s ↑t :=
+        stays_bipartite_after_vertex_removal h
+      obtain ⟨h₆, h₇⟩ := edgeSet_ncard_le_of_finsets (G := G.deleteIncidenceSet a) h₅
+      rw [Nat.succ_mul] at h₁
+      have h₈ : (edges_from_set_to_vertex (G := G) ↑t a).ncard ≤ t.card :=
+        edges_from_set_to_vertex_le t a
+      have h₉ : (G.deleteIncidenceSet a).edgeSet.ncard = s.card * t.card := by
+        linarith
+      have h₁₀ : (edges_from_set_to_vertex (G := G) ↑t a).ncard = t.card := by
+        linarith
+      have h₁₁ := (iH h₅ h₆).mp h₉
+      have h₁₂ : t.card = (t : Set V).ncard := by simp
+      rw [h₁₂] at h₁₀
+      simp [edges_from_set_to_vertex] at h₁₀
+      have h₁₃ : ((fun u ↦ s(u, a)) '' {x | x ∈ t ∧ G.Adj a x}).ncard ≤
+          (↑t ∩ G.neighborSet a).ncard := by
+        apply Set.ncard_image_le; rw [Set.setOf_and]; apply Set.toFinite
+      have h₁₄ : (↑t ∩ G.neighborSet a).ncard ≤ t.card := by
+        rw [h₁₂]
+        apply Set.ncard_inter_le_ncard_left
+        exact Finset.finite_toSet t
+      have h₁₅ : (↑t ∩ G.neighborSet a).ncard = t.card := by linarith
+      rw [h₁₂] at h₁₅
+      rw [← SimpleGraph.edgeSet_inj, h']
+      classical
+      have h₁₆ := complete_decompose (by convert h.disjoint; simp; rfl)
+      simp only [Finset.coe_insert] at h₁₆; rw [h₁₆]
+      rw [h₁₁]; congr
+      have h₁₇ := subset_of_inter_eq_self h₁₅ (Finset.finite_toSet t)
+        (by apply neighborSet_finite_of_edgeSet_finite; exact h₀)
+      simp only [complete, Set.mem_insert_iff, SetLike.mem_coe, edges_from_set_to_vertex, true_or,
+        true_and] at h₁₆
+      have h₁₈ : ↑t = G.neighborSet a := by
+        ext x; simp only [SetLike.mem_coe, mem_neighborSet]
+        constructor <;> intros h₁₈
+        · apply h₁₇; simp only [SetLike.mem_coe]; exact h₁₈
+        · have h₁₉ := h.mem_of_adj h₁₈
+          simp only [Set.mem_insert_iff, SetLike.mem_coe, true_or, true_and] at h₁₉
+          obtain h₁₉ | h₁₉ := h₁₉
+          · exact h₁₉
+          · obtain ⟨h₁₉, h₂₀ | h₂₀⟩ := h₁₉
+            · subst x; exact h₁₉
+            · have h₂₁ := h.disjoint (x := {a}); simp only [Set.le_eq_subset,
+              Set.singleton_subset_iff, Set.mem_insert_iff, SetLike.mem_coe, true_or,
+              Set.bot_eq_empty, Set.subset_empty_iff, Set.singleton_ne_empty, imp_false,
+              forall_const] at h₂₁
+              tauto
+      simp only at h₁₇; rw! [h₁₈]
+      simp only [incidenceSet, edges_from_set_to_vertex, mem_neighborSet, complete,
+        Set.mem_insert_iff, SetLike.mem_coe, true_or, true_and, SimpleGraph.irrefl, false_and,
+        or_false, and_self]
+      ext e; cases e; rename_i x y
+      simp only [Set.mem_setOf_eq, mem_edgeSet, Sym2.mem_iff, Set.mem_image, Sym2.eq, Sym2.rel_iff',
+        Prod.mk.injEq, Prod.swap_prod_mk]
+      constructor <;> intros h₁₈
+      · obtain ⟨h₁₈, rfl | rfl⟩  := h₁₈
+        · use y; simp [h₁₈]
+        · use x; simp only [and_self, true_or, and_true]; exact h₁₈.symm
+      · obtain ⟨w, h₁₈, h₁₉⟩ := h₁₈
+        obtain ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ := h₁₉
+        · simp only [or_true, and_true]; exact h₁₈.symm
+        · simp only [h₁₈, true_or, and_self]
+    · rw [h₁]
+      classical
+      obtain ⟨h₂, h₃⟩ := edgeSet_encard_of_complete_of_finsets (t := t) (s := insert a s)
+        (by convert h.disjoint; simp)
+      rw [← Set.Finite.cast_ncard_eq h₂] at h₃
+      norm_cast at h₃; simp only [Finset.coe_insert, ha, not_false_eq_true,
+        Finset.card_insert_of_notMem] at h₃
+      exact h₃
